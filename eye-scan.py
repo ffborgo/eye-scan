@@ -6,7 +6,7 @@ import seaborn as sns
 from scipy.ndimage import gaussian_filter
 
 # Ubicación de la carpeta con los archivos CSV
-folder_path = "/content/drive/MyDrive/Cosas de la facu/Experimentos Cuanticos II/datos TPFinal EC2/15G/OM3-corta"
+folder_path = "/datos"
 file_names = ["1000mV-TR31-NoDFE.csv", "134mV-TR31-NoDFE.csv", "1000mV-TR7-NoDFE.csv", "523mV-TR31-NoDFE.csv"]
 output_folder = folder_path
 
@@ -31,32 +31,36 @@ for file_name in file_names:
                 values = line.strip().split(",")[1:]  # Se omiten los valores de la primera columna
                 data.append(values)
 
-    # Crear un DataFrame con los datos
-    df = pd.DataFrame(data)
+    # Verificar si hay datos para procesar
+    if len(data) > 0:
+        # Crear un DataFrame con los datos
+        df = pd.DataFrame(data)
+        df = df.apply(pd.to_numeric, errors='coerce')  # Asegura que los datos no numéricos se conviertan en NaN
 
-    # Convertir las columnas numéricas a tipo float
-    df = df.apply(pd.to_numeric)
+        # Aplicar suavizado al DataFrame utilizando un filtro gaussiano
+        df_smooth = gaussian_filter(df, sigma=sigma)
 
-    # Aplicar suavizado al DataFrame utilizando un filtro gaussiano
-    df_smooth = gaussian_filter(df, sigma=sigma)
+        # Ajustar el tamaño de la figura y la relación de aspecto del mapa de calor
+        fig, ax = plt.subplots(figsize=(15, 8))
+        ax.set_aspect("auto")
 
-    # Ajustar el tamaño de la figura y la relación de aspecto del mapa de calor
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.set_aspect("auto")
+        # Crear un mapa de calor (heatmap) utilizando seaborn
+        heatmap = sns.heatmap(df_smooth, cmap="coolwarm", cbar=False, linewidths=0, linecolor='white', annot=False, ax=ax)
 
-    # Crear un mapa de calor (heatmap) utilizando seaborn con los datos suavizados y la paleta de colores "Crest"
-    heatmap = sns.heatmap(df_smooth, cmap="coolwarm", cbar=False, linewidths=0, linecolor='white', annot=False, ax=ax)
+        # Eliminar los ejes
+        plt.axis('off')
 
-#    plt.title(f"Heatmap suavizado de los datos extraídos - {file_name}", fontsize=16)
-    plt.axis('off')  # Eliminar los ejes y los números de las filas y columnas
+        # Agregar la colorbar
+        cbar = heatmap.figure.colorbar(heatmap.collections[0])
+        cbar.set_label("Profundidad", fontsize=12)
 
-    # Agregar la colorbar
-    cbar = heatmap.figure.colorbar(heatmap.collections[0])
-    cbar.set_label("Profundidad", fontsize=12)
+        # Guardar la imagen en la carpeta de salida
+        output_file = f"{file_name.split('.')[0]}_heatmap.png"
+        output_path = os.path.join(output_folder, output_file)
+        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
 
-    # Guardar la imagen en la carpeta de salida
-    output_file = "ojo15.png"  # Nombre del archivo de imagen
-    output_path = os.path.join(output_folder, output_file)
-    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
-
-    plt.show()
+        plt.show()
+        plt.close()
+    else:
+        print(f"El archivo {file_name} está vacío o no contiene datos válidos.")
+        continue  # Saltar al siguiente archivo
